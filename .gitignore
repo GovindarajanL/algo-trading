@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Credentials and Secrets
+.env
+credentials.env
+config/.env
+*.key
+*.pem
+
+# Logs
+logs/*.log
+*.log
+
+# Database
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+*.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Trading Data
+data/backtest/
+data/live/
+data/paper/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb

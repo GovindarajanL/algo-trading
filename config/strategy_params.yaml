@@ -1,0 +1,143 @@
+# Strategy Configuration Parameters
+
+# Iron Condor Strategy
+iron_condor:
+  enabled: true
+  sd_distance: 1.0               # Standard deviations from spot for short strikes
+  wing_width: 200                # Distance between short and long strikes (points)
+  target_profit: 0.50            # Target profit (50% of max profit)
+  stop_loss: 1.00                # Stop loss (100% of credit received)
+  min_dte: 5                     # Minimum days to expiry
+  max_dte: 15                    # Maximum days to expiry
+  max_vix: 20                    # Enter only if VIX < 20
+  min_credit: 50                 # Minimum credit per lot (₹)
+  delta_stop: 0.50               # Exit if short option Delta >= this
+
+# Bull Call Spread
+bull_call_spread:
+  enabled: true
+  strike_width: 200              # Distance between long and short call (points)
+  long_call_atm_offset: 0        # 0 = ATM, 1 = 1 strike OTM
+  target_profit: 0.70            # Target profit (70% of max profit)
+  stop_loss: 0.50                # Stop loss (50% of debit paid)
+  trail_stop: 0.30               # Start trailing after 30% profit
+  min_dte: 7                     # Minimum days to expiry
+  max_dte: 21                    # Maximum days to expiry
+  min_iv: 15                     # Minimum implied volatility (%)
+
+# Bear Put Spread
+bear_put_spread:
+  enabled: true
+  strike_width: 200              # Distance between long and short put (points)
+  long_put_atm_offset: 0         # 0 = ATM, 1 = 1 strike OTM
+  target_profit: 0.70            # Target profit (70% of max profit)
+  stop_loss: 0.50                # Stop loss (50% of debit paid)
+  trail_stop: 0.30               # Start trailing after 30% profit
+  min_dte: 7                     # Minimum days to expiry
+  max_dte: 21                    # Maximum days to expiry
+  min_iv: 15                     # Minimum implied volatility (%)
+
+# Iron Butterfly
+iron_butterfly:
+  enabled: true
+  wing_width: 300                # Distance from ATM to protective wings (points)
+  target_profit: 0.45            # Target profit (45% of max profit)
+  stop_loss: 1.00                # Stop loss (100% of credit)
+  min_dte: 3                     # Minimum days to expiry
+  max_dte: 7                     # Maximum days to expiry
+  max_vix: 25                    # Enter only if VIX < 25
+  min_credit: 100                # Minimum credit per lot (₹)
+  delta_stop: 0.45               # Exit if either short option Delta >= this
+
+# Bull Put Spread (Credit Spread)
+bull_put_spread:
+  enabled: true
+  strike_width: 200              # Distance between short and long put (points)
+  short_put_otm_distance: 1.0    # SD below spot for short put
+  target_profit: 0.50            # Target profit (50% of max profit)
+  stop_loss: 1.00                # Stop loss (price breaks short strike)
+  min_dte: 7                     # Minimum days to expiry
+  max_dte: 21                    # Maximum days to expiry
+  min_credit: 40                 # Minimum credit per lot (₹)
+
+# Bear Call Spread (Credit Spread)
+bear_call_spread:
+  enabled: true
+  strike_width: 200              # Distance between short and long call (points)
+  short_call_otm_distance: 1.0   # SD above spot for short call
+  target_profit: 0.50            # Target profit (50% of max profit)
+  stop_loss: 1.00                # Stop loss (price breaks short strike)
+  min_dte: 7                     # Minimum days to expiry
+  max_dte: 21                    # Maximum days to expiry
+  min_credit: 40                 # Minimum credit per lot (₹)
+
+# Long Straddle (Volatility Play)
+long_straddle:
+  enabled: true
+  target_profit: 0.40            # Target profit (40% profit)
+  stop_loss: 0.50                # Stop loss (50% of premium paid)
+  min_dte: 1                     # Minimum days to expiry
+  max_dte: 7                     # Maximum days to expiry
+  max_vix: 25                    # Enter when VIX is low (cheap premium)
+  exit_same_day: true            # Exit same day due to theta decay
+  event_driven: true             # Only for event-driven trades
+
+# Long Strangle (Cheaper Volatility Play)
+long_strangle:
+  enabled: true
+  call_otm_strikes: 2            # Call 2 strikes OTM
+  put_otm_strikes: 2             # Put 2 strikes OTM
+  target_profit: 0.50            # Target profit (50% profit)
+  stop_loss: 0.40                # Stop loss (40% of premium paid)
+  min_dte: 1                     # Minimum days to expiry
+  max_dte: 7                     # Maximum days to expiry
+  max_vix: 25                    # Enter when VIX is low
+  exit_same_day: true            # Exit same day or next day
+  event_driven: true             # Only for event-driven trades
+
+# Calendar Spread (Time Spread)
+calendar_spread:
+  enabled: false                 # Disabled by default (complex management)
+  strike_selection: "ATM"        # Use ATM strike for both legs
+  near_term_dte: 7               # Near-term expiry DTE
+  far_term_dte: 21               # Far-term expiry DTE
+  target_profit: 0.50            # Target profit (50% on near-term decay)
+  stop_loss: 0.50                # Stop loss (50% of debit paid)
+  min_iv_differential: 5         # Minimum IV difference between expiries (%)
+
+# Strike Selection Configuration
+strike_selection:
+  method: "iv_based"             # Options: iv_based, fixed_distance
+  use_standard_deviation: true   # Use SD for probability-based strikes
+  nifty_strike_interval: 50      # Nifty strike interval
+  banknifty_strike_interval: 100 # Bank Nifty strike interval
+  finnifty_strike_interval: 50   # Fin Nifty strike interval
+
+# Entry Timing
+entry_timing:
+  market_stabilization_min: 5    # Wait 5 min after market open
+  last_entry_time: "15:00"       # No new entries after 3:00 PM
+  preferred_entry_start: "09:20" # Preferred entry start time
+  preferred_entry_end: "14:00"   # Preferred entry end time
+  avoid_first_15_min: true       # Avoid first 15 min (9:15-9:30)
+
+# Exit Timing
+exit_timing:
+  force_exit_time: "15:20"       # Mandatory exit by 3:20 PM
+  exit_before_expiry_min: 60     # Exit 60 min before expiry if DTE=0
+  monitor_interval_sec: 60       # Check exit conditions every 60 seconds
+
+# Underlying Symbols
+symbols:
+  - symbol: "NIFTY"
+    enabled: true
+    lot_size: 50                 # Check current lot size
+    min_capital: 5000
+  - symbol: "BANKNIFTY"
+    enabled: true
+    lot_size: 15                 # Check current lot size
+    min_capital: 10000
+  - symbol: "FINNIFTY"
+    enabled: false
+    lot_size: 40                 # Check current lot size
+    min_capital: 5000

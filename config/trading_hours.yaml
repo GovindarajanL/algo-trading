@@ -1,0 +1,75 @@
+# Trading Hours Configuration
+# All times in IST (Indian Standard Time - Asia/Kolkata)
+
+# Market Hours
+market_hours:
+  pre_market_start: "09:00"      # Pre-market checks start
+  market_open: "09:15"            # Market opens
+  market_close: "15:30"           # Market closes
+  post_market_end: "15:35"        # Post-market processing end
+
+# Trading Windows
+trading_windows:
+  system_startup: "08:55"         # Start system before market
+  pre_market_checks: "09:00"      # Run health checks
+  trading_start: "09:20"          # Allow market stabilization
+  trading_end: "15:00"            # No new positions after this
+  force_square_off: "15:20"       # Mandatory exit time
+  monitoring_end: "15:30"         # Stop monitoring
+  eod_processing: "15:35"         # End of day reports
+
+# Weekly Expiry Schedule
+weekly_expiry:
+  NIFTY: "THURSDAY"               # Nifty expires on Thursday
+  BANKNIFTY: "WEDNESDAY"          # Bank Nifty expires on Wednesday
+  FINNIFTY: "TUESDAY"             # Fin Nifty expires on Tuesday
+
+# Monthly Expiry
+monthly_expiry:
+  day: "LAST_THURSDAY"            # Last Thursday of the month
+
+# Market Holidays (Update annually)
+# Will be fetched from NSE holiday calendar
+market_holidays:
+  - "2025-01-26"  # Republic Day
+  - "2025-03-14"  # Holi
+  - "2025-03-29"  # Good Friday
+  - "2025-04-10"  # Id-Ul-Fitr
+  - "2025-04-14"  # Dr. Ambedkar Jayanti
+  - "2025-04-21"  # Ram Navami
+  - "2025-05-01"  # Maharashtra Day
+  - "2025-06-17"  # Bakri Id
+  - "2025-08-15"  # Independence Day
+  - "2025-08-27"  # Ganesh Chaturthi
+  - "2025-10-02"  # Gandhi Jayanti
+  - "2025-10-22"  # Dussehra
+  - "2025-11-01"  # Diwali Laxmi Pujan
+  - "2025-11-12"  # Diwali Balipratipada
+  - "2025-11-24"  # Gurunanak Jayanti
+  - "2025-12-25"  # Christmas
+
+# Special Trading Days (Modified timings)
+special_trading_days:
+  muhurat_trading:
+    date: "2025-11-01"
+    start_time: "18:00"
+    end_time: "19:00"
+
+# System Schedule
+system_schedule:
+  health_check_interval_sec: 60   # Health check every 60 seconds
+  position_monitor_interval_sec: 60  # Monitor positions every 60 sec
+  greeks_update_interval_sec: 60  # Update Greeks every 60 seconds
+  data_collection_interval_sec: 60  # Collect data every 60 seconds
+
+# Time Buffers
+time_buffers:
+  startup_buffer_min: 5           # Start 5 min before trading
+  exit_buffer_min: 10             # Exit 10 min before market close
+  expiry_exit_buffer_min: 60      # Exit 60 min before expiry on expiry day
+
+# Timezone
+timezone: "Asia/Kolkata"
+
+# Daylight Saving (Not applicable for India)
+dst_applicable: false

@@ -1,0 +1,73 @@
+# Risk Management Configuration
+# All amounts in INR unless specified
+
+# Position-Level Risk
+max_loss_per_trade: 1000         # Maximum loss per single position (₹)
+max_capital_per_trade: 5000      # Maximum capital allocation per trade (₹)
+max_lot_size: 5                  # Maximum lot size per position
+
+# Daily Risk Limits
+max_daily_loss: 5000             # Daily loss circuit breaker (₹)
+max_trades_per_day: 10           # Maximum number of trades per day
+max_consecutive_losses: 5        # Consecutive losses before halt
+
+# Portfolio Risk
+total_capital: 50000             # Total allocated trading capital (₹)
+risk_per_trade_pct: 2            # Risk percentage per trade (2% = ₹1000 on ₹50000)
+max_positions: 5                 # Maximum concurrent positions
+reserved_capital_pct: 20         # Reserved for adjustments (20%)
+
+# Portfolio Greeks Limits
+portfolio_greeks:
+  max_delta: 500                 # Maximum absolute portfolio Delta
+  max_gamma: 100                 # Maximum absolute portfolio Gamma
+  min_theta: -1000               # Minimum portfolio Theta (daily decay limit)
+  max_vega: 1000                 # Maximum absolute portfolio Vega
+  delta_neutral_tolerance: 50    # Delta deviation tolerance from zero
+
+# Margin Management
+margin_utilization_warning: 70   # Warning at 70% margin usage (%)
+margin_utilization_critical: 80  # Critical at 80% margin usage (%)
+margin_buffer_pct: 20            # Keep 20% margin buffer
+
+# Circuit Breakers
+circuit_breakers:
+  daily_loss_limit: 5000         # Halt trading if daily loss >= this
+  consecutive_losses: 5          # Halt after N consecutive losses
+  max_vix: 40                    # Halt if VIX exceeds this
+  api_latency_ms: 2000           # Halt if API latency > this (ms)
+  min_capital_pct: 50            # Halt if capital drops below 50% of initial
+
+# Stop Loss Configuration
+stop_loss:
+  percentage_based: true         # Enable percentage-based stops
+  default_stop_pct: 100          # Default stop at 100% of credit/debit
+  delta_based: true              # Enable Delta-based stops
+  delta_danger: 0.40             # Warning level Delta
+  delta_critical: 0.50           # Auto-exit Delta level
+  time_based: true               # Enable time-based mandatory exit
+  force_exit_time: "15:20"       # Force exit time (3:20 PM)
+
+# Position Adjustment Limits
+adjustments:
+  enabled: true                  # Enable position adjustments
+  max_per_position: 2            # Maximum adjustments per position
+  min_time_between_min: 30       # Minimum 30 minutes between adjustments
+  max_additional_capital_pct: 50 # Max additional capital for adjustments (% of original)
+
+# Prohibited Strategies (Always Rejected)
+prohibited_strategies:
+  - naked_call
+  - naked_put
+  - short_straddle_unhedged
+  - short_strangle_unhedged
+  - ratio_spread_unhedged
+
+# Validation Thresholds
+validation:
+  min_volume: 1000               # Minimum option volume for entry
+  min_open_interest: 10000       # Minimum OI for entry
+  max_bid_ask_spread_pct: 10     # Maximum bid-ask spread (%)
+  min_bid_depth: 25              # Minimum bid quantity depth
+  min_ask_depth: 25              # Minimum ask quantity depth
+  max_price_divergence_pct: 15   # Max model vs market price divergence (%)
