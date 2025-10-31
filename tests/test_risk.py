@@ -30,15 +30,11 @@ def test_defined_risk_check():
             {'action': 'SELL', 'option_type': 'CE', 'strike': 45800},
             {'action': 'BUY', 'option_type': 'CE', 'strike': 46000}
         ],
-        entry_conditions_met=True,
-        reason="Test",
-        timestamp=datetime.now(),
         max_loss=800,
         max_profit=400,
         margin_required=1000,
         position_greeks={'delta': 0, 'gamma': 0, 'theta': 10, 'vega': -50},
-        target_profit_pct=50,
-        stop_loss_pct=100
+        timestamp=datetime.now().isoformat()
     )
 
     result = validator.validate_trade(signal, [], {'daily_pnl': 0})
@@ -64,15 +60,11 @@ def test_max_loss_exceeds_limit():
         symbol="BANKNIFTY",
         expiry_date="2025-11-06",
         legs=[],
-        entry_conditions_met=True,
-        reason="Test",
-        timestamp=datetime.now(),
         max_loss=1000,  # Exceeds limit
         max_profit=400,
         margin_required=1200,
         position_greeks={},
-        target_profit_pct=50,
-        stop_loss_pct=100
+        timestamp=datetime.now().isoformat()
     )
 
     result = validator.validate_trade(signal, [], {'daily_pnl': 0})
@@ -99,15 +91,11 @@ def test_prohibited_strategy():
         symbol="BANKNIFTY",
         expiry_date="2025-11-06",
         legs=[{'action': 'SELL', 'option_type': 'CE'}],  # No protection
-        entry_conditions_met=True,
-        reason="Test",
-        timestamp=datetime.now(),
         max_loss=float('inf'),  # Infinite risk
         max_profit=100,
         margin_required=5000,
         position_greeks={},
-        target_profit_pct=50,
-        stop_loss_pct=100
+        timestamp=datetime.now().isoformat()
     )
 
     result = validator.validate_trade(signal, [], {'daily_pnl': 0})
@@ -133,15 +121,11 @@ def test_position_limits():
         symbol="BANKNIFTY",
         expiry_date="2025-11-06",
         legs=[],
-        entry_conditions_met=True,
-        reason="Test",
-        timestamp=datetime.now(),
         max_loss=800,
         max_profit=400,
         margin_required=1000,
         position_greeks={},
-        target_profit_pct=50,
-        stop_loss_pct=100
+        timestamp=datetime.now().isoformat()
     )
 
     # Test with 2 existing positions (at limit)
