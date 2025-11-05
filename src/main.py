@@ -239,21 +239,180 @@ class TradingEngine:
         return not any_triggered
 
     def _monitor_positions(self, current_time: datetime):
-        """Monitor and update open positions"""
+        """
+        Monitor and update open positions
+        Fetches current prices, calculates Greeks, checks exit conditions
+        """
         self.open_positions = self.db.get_open_positions()
 
+        if not self.open_positions:
+            return
+
+        self.logger.debug(f"Monitoring {len(self.open_positions)} open positions")
+
         for position in self.open_positions:
-            # Get current prices (would come from market data)
-            current_prices = {}  # Placeholder
-            current_greeks = {}  # Placeholder
+            try:
+                # Get position legs
+                legs = position.get('legs', [])
+                if isinstance(legs, str):
+                    import json
+                    legs = json.loads(legs)
 
-            # Check exit conditions
-            risk_status = self.position_risk.get_position_risk_status(
-                position, current_prices, current_greeks
-            )
+                # Fetch current prices for all legs
+                current_prices = {}
+                symbols = [leg.get('symbol', leg.get('tradingsymbol', '')) for leg in legs]
 
-            if risk_status['should_exit']:
-                self._exit_position(position, risk_status['exit_reason'])
+                try:
+                    # Batch fetch LTPs for efficiency
+                    ltp_data = self.broker.get_ltp_batch(symbols) if hasattr(self.broker, 'get_ltp_batch') else {}
+
+                    for leg in legs:
+                        symbol = leg.get('symbol', leg.get('tradingsymbol', ''))
+                        if symbol in ltp_data:
+                            current_prices[symbol] = ltp_data[symbol]
+                        else:
+                            # Fallback: fetch individually
+                            market_data = self.broker.get_market_data(symbol)
+                            if market_data:
+                                current_prices[symbol] = market_data.get('ltp', 0)
+
+                except Exception as e:
+                    self.logger.warning(f"Error fetching prices for position {position.get('id')}: {e}")
+                    continue
+
+                # Calculate current position value
+                current_position_value = 0
+                for leg in legs:
+                    symbol = leg.get('symbol', leg.get('tradingsymbol', ''))
+                    quantity = leg.get('quantity', 0)
+                    current_price = current_prices.get(symbol, 0)
+
+                    # For sold options, we receive premium (negative in P&L calc)
+                    if leg.get('action') == 'SELL':
+                        current_position_value -= current_price * quantity
+                    else:  # BUY
+                        current_position_value += current_price * quantity
+
+                # Calculate P&L
+                entry_premium = position.get('entry_premium', 0)
+                current_pnl = entry_premium - current_position_value
+
+                # Calculate current Greeks for the position
+                current_greeks = {'delta': 0, 'gamma': 0, 'theta': 0, 'vega': 0, 'rho': 0}
+
+                try:
+                    # Get market data for underlying
+                    underlying_symbol = position.get('symbol', 'BANKNIFTY')
+                    spot_data = self.broker.get_market_data(underlying_symbol)
+                    spot_price = spot_data.get('ltp', 45000) if spot_data else 45000
+
+                    # Calculate time to expiry
+                    expiry_str = position.get('expiry_date', '')
+                    if expiry_str:
+                        expiry_date = datetime.strptime(expiry_str, '%Y-%m-%d').date()
+                        dte_days = (expiry_date - datetime.now().date()).days
+                        time_to_expiry = max(dte_days / 365.0, 0.001)  # Avoid zero
+
+                        # Calculate Greeks for each leg and aggregate
+                        for leg in legs:
+                            strike = leg.get('strike', 0)
+                            option_type = leg.get('option_type', 'CE')
+                            quantity = leg.get('quantity', 0)
+                            action = leg.get('action', 'BUY')
+
+                            if strike > 0:
+                                # Use current market IV or default
+                                volatility = 0.25  # Default 25% IV (could fetch actual IV)
+
+                                leg_greeks = self.bs_calc.calculate_greeks(
+                                    spot_price=spot_price,
+                                    strike_price=strike,
+                                    time_to_expiry=time_to_expiry,
+                                    volatility=volatility,
+                                    option_type=option_type
+                                )
+
+                                # Aggregate Greeks (sold options have negative Greeks)
+                                multiplier = quantity if action == 'BUY' else -quantity
+
+                                for greek in ['delta', 'gamma', 'theta', 'vega', 'rho']:
+                                    current_greeks[greek] += leg_greeks.get(greek, 0) * multiplier
+
+                except Exception as e:
+                    self.logger.warning(f"Error calculating Greeks: {e}")
+
+                # Update position in database
+                self.db.update_position(position['id'], {
+                    'current_value': current_position_value,
+                    'current_pnl': current_pnl,
+                    'current_greeks': str(current_greeks),
+                    'last_update': datetime.now().isoformat()
+                })
+
+                # Check exit conditions
+                should_exit = False
+                exit_reason = ""
+
+                # 1. Check profit target
+                target_profit = position.get('target_profit', 0)
+                if target_profit > 0 and current_pnl >= target_profit:
+                    should_exit = True
+                    exit_reason = f"Target profit reached (₹{current_pnl:.2f})"
+
+                # 2. Check stop loss
+                max_loss = position.get('max_loss', 0)
+                stop_loss_amount = position.get('stop_loss', max_loss)
+                if current_pnl <= -stop_loss_amount:
+                    should_exit = True
+                    exit_reason = f"Stop loss hit (₹{current_pnl:.2f})"
+
+                # 3. Check Greeks limits
+                greeks_check = self.position_risk.check_position_greeks(current_greeks)
+                if not greeks_check.get('all_within_limits', True):
+                    should_exit = True
+                    exit_reason = f"Greeks limit breach: {greeks_check.get('violations', [])}"
+
+                # 4. Check time-based exit (expiry day exit)
+                if hasattr(self, 'nse_calendar'):
+                    if self.nse_calendar.is_expiry_day(underlying_symbol, datetime.now().date()):
+                        if current_time.time() >= time.fromisoformat("15:00"):
+                            should_exit = True
+                            exit_reason = "Expiry day - closing before 3:20 PM"
+
+                # 5. Risk manager override
+                try:
+                    position_with_prices = position.copy()
+                    position_with_prices['current_price'] = current_position_value / position.get('quantity', 1)
+                    position_with_prices['current_pnl'] = current_pnl
+
+                    risk_should_exit, risk_reason = self.position_risk.should_exit(
+                        position_with_prices,
+                        current_greeks
+                    )
+
+                    if risk_should_exit:
+                        should_exit = True
+                        exit_reason = risk_reason
+
+                except Exception as e:
+                    self.logger.warning(f"Error in risk manager check: {e}")
+
+                # Execute exit if needed
+                if should_exit:
+                    self.logger.info(
+                        f"Exit signal for position {position.get('id')}: {exit_reason}"
+                    )
+                    self._exit_position(position, exit_reason, current_prices, current_pnl)
+
+                # Log position status
+                self.logger.debug(
+                    f"Position {position.get('id')}: {position.get('strategy_name')} | "
+                    f"P&L: ₹{current_pnl:.2f} | Delta: {current_greeks['delta']:.2f}"
+                )
+
+            except Exception as e:
+                self.logger.error(f"Error monitoring position {position.get('id')}: {e}")
+                continue
 
     def _can_enter_new_positions(self, current_time: datetime) -> bool:
         """Check if new positions can be entered"""
@@ -354,23 +513,120 @@ class TradingEngine:
 
         self.logger.info(f"✅ Position entered: ID={position_id}")
 
-    def _exit_position(self, position: Dict, reason: str):
-        """Exit position"""
-        self.logger.info(f"Exiting position: {position['strategy_name']} - {reason}")
+    def _exit_position(self, position: Dict, reason: str, current_prices: Dict = None, calculated_pnl: float = None):
+        """
+        Exit position by placing orders to close all legs
 
-        # Place exit orders
-        # ... order placement logic ...
+        Args:
+            position: Position dictionary
+            reason: Exit reason
+            current_prices: Current market prices for the legs
+            calculated_pnl: Pre-calculated P&L (optional)
+        """
+        self.logger.info(f"Exiting position {position.get('id')}: {position['strategy_name']} - {reason}")
+
+        # Get legs
+        legs = position.get('legs', [])
+        if isinstance(legs, str):
+            import json
+            legs = json.loads(legs)
+
+        # Place exit orders for all legs (reverse the original action)
+        exit_order_ids = []
+        exit_fills = []
+
+        for leg in legs:
+            try:
+                symbol = leg.get('symbol', leg.get('tradingsymbol', ''))
+                quantity = leg.get('quantity', 0)
+                original_action = leg.get('action', 'BUY')
+
+                # Reverse the action to close
+                exit_action = 'SELL' if original_action == 'BUY' else 'BUY'
+
+                # Get current price or use last known
+                if current_prices and symbol in current_prices:
+                    exit_price = current_prices[symbol]
+                else:
+                    # Fetch current price
+                    market_data = self.broker.get_market_data(symbol)
+                    exit_price = market_data.get('ltp', 0) if market_data else 0
+
+                # Place market order for immediate exit
+                exit_order = {
+                    'symbol': symbol,
+                    'transaction_type': exit_action,
+                    'quantity': quantity,
+                    'order_type': 'MARKET',  # Market order for quick exit
+                    'product_type': 'INTRADAY'
+                }
+
+                self.logger.info(
+                    f"Placing exit order: {exit_action} {quantity} x {symbol} @ MARKET"
+                )
+
+                order_id = self.broker.place_order(exit_order)
+
+                if order_id:
+                    exit_order_ids.append(order_id)
+                    exit_fills.append({
+                        'symbol': symbol,
+                        'price': exit_price,
+                        'quantity': quantity,
+                        'action': exit_action
+                    })
+                    self.logger.info(f"✅ Exit order placed: {order_id}")
+                else:
+                    self.logger.error(f"❌ Failed to place exit order for {symbol}")
+
+            except Exception as e:
+                self.logger.error(f"Error placing exit order for leg: {e}")
+                continue
+
+        # Calculate exit premium and P&L
+        exit_premium = 0
+        for fill in exit_fills:
+            price = fill['price']
+            quantity = fill['quantity']
+            action = fill['action']
+
+            # For exit: SELL gives us money (positive), BUY costs money (negative)
+            if action == 'SELL':
+                exit_premium += price * quantity
+            else:  # BUY
+                exit_premium -= price * quantity
 
         # Calculate P&L
-        pnl = 0  # Would calculate from actual fills
+        entry_premium = position.get('entry_premium', 0)
+
+        if calculated_pnl is not None:
+            # Use pre-calculated P&L
+            pnl = calculated_pnl
+        else:
+            # Calculate from entry and exit premiums
+            # P&L = Entry Premium - Exit Premium
+            # (For a credit spread, we want exit premium to be less than entry)
+            pnl = entry_premium - exit_premium
+
+        # Calculate holding time
+        entry_time_str = position.get('entry_time', '')
+        if entry_time_str:
+            try:
+                entry_time = datetime.fromisoformat(entry_time_str)
+                holding_minutes = (datetime.now() - entry_time).total_seconds() / 60
+            except Exception:
+                holding_minutes = 0
+        else:
+            holding_minutes = 0
 
         # Update database
         exit_data = {
-            'exit_time': datetime.now(),
-            'exit_premium': 0,  # Actual exit premium
-            'pnl': pnl,
+            'exit_time': datetime.now().isoformat(),
+            'exit_premium': exit_premium,
+            'realized_pnl': pnl,
             'exit_reason': reason,
-            'holding_time_minutes': 0
+            'holding_time_minutes': int(holding_minutes),
+            'exit_orders': str(exit_order_ids)
         }
 
         self.db.close_position(position['id'], exit_data)
@@ -387,16 +643,27 @@ class TradingEngine:
         self.daily_stats['daily_pnl'] += pnl
 
         # Send notification
-        self.telegram.notify_trade_exit(position, reason, pnl)
+        try:
+            self.telegram.notify_trade_exit(position, reason, pnl)
+        except Exception as e:
+            self.logger.warning(f"Failed to send exit notification: {e}")
 
         # Record for performance tracking
-        self.performance.record_trade({
-            **position,
-            'pnl': pnl,
-            'exit_time': datetime.now()
-        })
+        try:
+            self.performance.record_trade({
+                **position,
+                'pnl': pnl,
+                'exit_time': datetime.now(),
+                'exit_reason': reason,
+                'holding_time_minutes': holding_minutes
+            })
+        except Exception as e:
+            self.logger.warning(f"Failed to record trade in performance tracker: {e}")
 
-        self.logger.info(f"✅ Position exited: P&L=₹{pnl:.2f}")
+        self.logger.info(
+            f"✅ Position {position.get('id')} exited: "
+            f"P&L=₹{pnl:.2f} | Holding Time={holding_minutes:.0f} mins"
+        )
 
     def _is_force_square_off_time(self, current_time: datetime) -> bool:
         """Check if force square-off time reached"""
