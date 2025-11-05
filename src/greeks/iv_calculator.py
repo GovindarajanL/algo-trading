@@ -5,7 +5,7 @@ REQ-GREEK-006: Calculate Implied Volatility from market prices
 """
 
 import math
-from typing import Optional
+from typing import Optional, Dict, List
 import logging
 
 
