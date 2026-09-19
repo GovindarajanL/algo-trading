@@ -47,7 +47,8 @@ class AngelOneBroker:
 
             api_key = self.credentials.get('api_key')
             client_id = self.credentials.get('client_id')
-            password = self.credentials.get('password')
+            password = self.credentials.get('password')  # This is MPIN
+            totp_secret = self.credentials.get('totp_secret')
 
             if not all([api_key, client_id, password]):
                 self.logger.error("Missing required credentials")
@@ -56,8 +57,20 @@ class AngelOneBroker:
             # Initialize SmartAPI
             self.smartApi = SmartConnect(api_key=api_key)
 
-            # Generate session
+            # Generate TOTP token if secret provided
+            totp_token = None
+            if totp_secret:
+                import pyotp
+                totp = pyotp.TOTP(totp_secret)
+                totp_token = totp.now()
+                self.logger.info("Generated TOTP token for 2FA")
+
+            # Generate session (with or without TOTP)
             session_data = self.smartApi.generateSession(
+                clientCode=client_id,
+                password=password,
+                totp=totp_token
+            ) if totp_token else self.smartApi.generateSession(
                 clientCode=client_id,
                 password=password
             )
