@@ -38,8 +38,8 @@ echo -e "\n${YELLOW}Configuration:${NC}"
 read -p "VM Name [algo-trading-vm]: " VM_NAME
 VM_NAME=${VM_NAME:-algo-trading-vm}
 
-read -p "Zone [asia-south1-a]: " ZONE
-ZONE=${ZONE:-asia-south1-a}
+read -p "Zone [us-central1-a]: " ZONE
+ZONE=${ZONE:-us-central1-a}
 
 read -p "Machine Type [e2-medium]: " MACHINE_TYPE
 MACHINE_TYPE=${MACHINE_TYPE:-e2-medium}

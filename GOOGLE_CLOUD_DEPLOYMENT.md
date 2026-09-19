@@ -94,7 +94,7 @@ gcloud services enable secretmanager.googleapis.com
 ```bash
 # Create a VM optimized for trading
 gcloud compute instances create algo-trading-vm \
-    --zone=asia-south1-a \
+    --zone=us-central1-a \
     --machine-type=e2-medium \
     --boot-disk-size=20GB \
     --boot-disk-type=pd-standard \
@@ -113,14 +113,14 @@ gcloud compute instances create algo-trading-vm \
 - **`e2-medium` (1-2 vCPU, 4GB RAM): Recommended** - Good balance
 - `e2-standard-2` (2 vCPU, 8GB RAM): Live trading with multiple strategies
 
-**Cost Estimate** (e2-medium in asia-south1):
-- ~$0.0335/hour × 6.5 hours/day × 20 trading days = ~$4.36/month
+**Cost Estimate** (e2-medium in us-central1):
+- ~$0.0268/hour × 6.5 hours/day × 20 trading days = ~$3.48/month
 
 ### Step 2: SSH into VM
 
 ```bash
 # Connect to VM
-gcloud compute ssh algo-trading-vm --zone=asia-south1-a
+gcloud compute ssh algo-trading-vm --zone=us-central1-a
 ```
 
 ### Step 3: Setup Trading Environment
@@ -366,7 +366,7 @@ gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/algo-trading
 gcloud run deploy algo-trading \
     --image gcr.io/YOUR_PROJECT_ID/algo-trading \
     --platform managed \
-    --region asia-south1 \
+    --region us-central1 \
     --memory 2Gi \
     --timeout 3600 \
     --no-allow-unauthenticated
@@ -403,7 +403,7 @@ gcloud compute firewall-rules create allow-trading-system \
 ```bash
 # Use OS Login for secure SSH access
 gcloud compute instances add-metadata algo-trading-vm \
-    --zone=asia-south1-a \
+    --zone=us-central1-a \
     --metadata enable-oslogin=TRUE
 ```
 
@@ -448,7 +448,7 @@ chmod +x /opt/algo-trading/scripts/backup_db.sh
 gcloud sql instances create algo-trading-db \
     --database-version=POSTGRES_14 \
     --tier=db-f1-micro \
-    --region=asia-south1 \
+    --region=us-central1 \
     --backup \
     --backup-start-time=16:00
 
@@ -576,13 +576,13 @@ notifications:
 
 | Resource | Configuration | Hours/Month | Cost/Month |
 |----------|--------------|-------------|------------|
-| **Compute Engine** | e2-medium | 130 (6.5h × 20 days) | $4.36 |
+| **Compute Engine** | e2-medium | 130 (6.5h × 20 days) | $3.48 |
 | **Persistent Disk** | 20GB Standard | 730 | $0.80 |
 | **Cloud Logging** | 5GB/month | - | $0.50 |
 | **Secret Manager** | 5 secrets | - | $0.18 |
 | **Cloud Scheduler** | 2 jobs | - | $0.20 |
 | **Network Egress** | 1GB | - | $0.12 |
-| **Total** | | | **~$6.16/month** |
+| **Total** | | | **~$5.28/month** |
 
 ### Cost Saving Tips
 
@@ -671,7 +671,7 @@ Before going live, ensure:
 
 ```bash
 # SSH into VM
-gcloud compute ssh algo-trading-vm --zone=asia-south1-a
+gcloud compute ssh algo-trading-vm --zone=us-central1-a
 
 # Activate environment
 cd /opt/algo-trading
@@ -711,7 +711,7 @@ gcloud scheduler jobs run start-trading-vm
 
 # Check VM started
 gcloud compute instances describe algo-trading-vm \
-    --zone=asia-south1-a \
+    --zone=us-central1-a \
     --format="get(status)"
 # Should return "RUNNING"
 ```
@@ -725,16 +725,16 @@ gcloud compute instances describe algo-trading-vm \
 ```bash
 # Check VM status
 gcloud compute instances describe algo-trading-vm \
-    --zone=asia-south1-a
+    --zone=us-central1-a
 
 # View serial console output
 gcloud compute instances get-serial-port-output algo-trading-vm \
-    --zone=asia-south1-a
+    --zone=us-central1-a
 
 # Common fix: Increase boot disk size
 gcloud compute disks resize algo-trading-vm \
     --size=30GB \
-    --zone=asia-south1-a
+    --zone=us-central1-a
 ```
 
 ### Issue: Trading System Not Starting
@@ -810,11 +810,11 @@ top -o %MEM
 sudo systemctl restart algo-trading.service
 
 # If persistent, upgrade VM:
-gcloud compute instances stop algo-trading-vm --zone=asia-south1-a
+gcloud compute instances stop algo-trading-vm --zone=us-central1-a
 gcloud compute instances set-machine-type algo-trading-vm \
     --machine-type=e2-standard-2 \
-    --zone=asia-south1-a
-gcloud compute instances start algo-trading-vm --zone=asia-south1-a
+    --zone=us-central1-a
+gcloud compute instances start algo-trading-vm --zone=us-central1-a
 ```
 
 ---

@@ -40,7 +40,7 @@ chmod +x scripts/deploy_to_gcp.sh
 ```
 
 **What this does:**
-- ✅ Creates a VM instance (e2-medium, ~$4.36/month)
+- ✅ Creates a VM instance (e2-medium, ~$3.48/month)
 - ✅ Enables required Google Cloud APIs
 - ✅ Sets up Cloud Scheduler for automated start/stop
 - ✅ Configures firewall rules
@@ -51,7 +51,7 @@ chmod +x scripts/deploy_to_gcp.sh
 
 ```bash
 # SSH into your VM
-gcloud compute ssh algo-trading-vm --zone=asia-south1-a
+gcloud compute ssh algo-trading-vm --zone=us-central1-a
 
 # Run the setup script
 curl -s https://raw.githubusercontent.com/GovindarajanL/algo-trading/claude/algorithmic-options-trading-system-011CUeAJhMkQBwkKWeWcvTm6/scripts/setup_vm.sh | bash
@@ -166,7 +166,7 @@ gcloud scheduler jobs run start-trading-vm
 gcloud compute instances list
 
 # SSH and verify trading service is running
-gcloud compute ssh algo-trading-vm --zone=asia-south1-a
+gcloud compute ssh algo-trading-vm --zone=us-central1-a
 sudo systemctl status algo-trading.service
 ```
 
@@ -191,16 +191,16 @@ sudo systemctl status algo-trading.service
 gcloud compute instances start algo-trading-vm --zone=asia-south1-a
 
 # Stop VM manually (emergency)
-gcloud compute ssh algo-trading-vm --zone=asia-south1-a
+gcloud compute ssh algo-trading-vm --zone=us-central1-a
 sudo systemctl stop algo-trading.service
 sudo shutdown -h now
 
 # View logs remotely
-gcloud compute ssh algo-trading-vm --zone=asia-south1-a
+gcloud compute ssh algo-trading-vm --zone=us-central1-a
 tail -f /opt/algo-trading/logs/trading.log
 
 # Check today's P&L
-gcloud compute ssh algo-trading-vm --zone=asia-south1-a
+gcloud compute ssh algo-trading-vm --zone=us-central1-a
 cd /opt/algo-trading
 source venv/bin/activate
 python -c "
@@ -220,7 +220,7 @@ conn.close()
 
 ```bash
 # Real-time logs
-gcloud compute ssh algo-trading-vm --zone=asia-south1-a
+gcloud compute ssh algo-trading-vm --zone=us-central1-a
 sudo journalctl -u algo-trading.service -f
 
 # Or application logs
@@ -257,13 +257,13 @@ Monitor from: https://console.cloud.google.com
 
 | Service | Cost |
 |---------|------|
-| Compute Engine (e2-medium, 130 hrs) | $4.36 |
+| Compute Engine (e2-medium, 130 hrs) | $3.48 |
 | Persistent Disk (20GB) | $0.80 |
 | Cloud Logging (5GB) | $0.50 |
 | Secret Manager | $0.18 |
 | Cloud Scheduler | $0.20 |
 | Network Egress | $0.12 |
-| **Total** | **~$6.16/month** |
+| **Total** | **~$5.28/month** |
 
 **Cost Optimization Tips:**
 - VM only runs 6.5 hours/day during trading
@@ -393,7 +393,7 @@ cp trading_YYYYMMDD_HHMMSS.db ../data/trading.db
 
 ```bash
 # Stop trading immediately
-gcloud compute ssh algo-trading-vm --zone=asia-south1-a
+gcloud compute ssh algo-trading-vm --zone=us-central1-a
 sudo systemctl stop algo-trading.service
 
 # Manually close all positions in Angel One platform

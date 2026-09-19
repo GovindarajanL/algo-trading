@@ -74,7 +74,7 @@ Follow the detailed guide in `GOOGLE_CLOUD_DEPLOYMENT.md`
 
 ```bash
 # SSH into your VM
-gcloud compute ssh algo-trading-vm --zone=asia-south1-a
+gcloud compute ssh algo-trading-vm --zone=us-central1-a
 
 # Run setup script
 cd /opt/algo-trading
@@ -156,13 +156,13 @@ sudo journalctl -u algo-trading.service -f
 
 | Service | Configuration | Monthly Cost |
 |---------|--------------|--------------|
-| **VM (e2-medium)** | 130 hours (6.5h × 20 days) | **$4.36** |
+| **VM (e2-medium)** | 130 hours (6.5h × 20 days) | **$3.48** |
 | Persistent Disk | 20GB Standard | $0.80 |
 | Cloud Logging | 5GB | $0.50 |
 | Secret Manager | 5 secrets | $0.18 |
 | Cloud Scheduler | 2 jobs | $0.20 |
 | Network Egress | 1GB | $0.12 |
-| **Total** | | **~$6.16/month** |
+| **Total** | | **~$5.28/month** |
 
 **💡 Cost Savings:**
 - Running 24/7: ~$24/month
@@ -242,8 +242,8 @@ See `PAPER_TRADING_VALIDATION.md` for detailed criteria.
 
 **VM won't start:**
 ```bash
-gcloud compute instances describe algo-trading-vm --zone=asia-south1-a
-gcloud compute instances get-serial-port-output algo-trading-vm --zone=asia-south1-a
+gcloud compute instances describe algo-trading-vm --zone=us-central1-a
+gcloud compute instances get-serial-port-output algo-trading-vm --zone=us-central1-a
 ```
 
 **Trading system not starting:**
